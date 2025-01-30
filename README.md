@@ -1,5 +1,9 @@
 # deepseek-vs-code-extension README
 
+Kindly Follow This Url For Video Where I Saw This
+
+[Video Reference](https://youtu.be/clJCDHml2cA?si=gDvwUOz8n0HEGSOh)
+
 This is the README for your extension "deepseek-vs-code-extension". After writing up a brief description, we recommend including the following sections.
 
 ## Features
