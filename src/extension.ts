@@ -118,15 +118,26 @@ function getWebviewContent(): string {
             transform: scale(1.05);
         }
 
-        #response {
+		#response {
             margin-top: 20px;
             padding: 10px;
             width: 80%;
             max-width: 600px;
+            max-height: 300px; /* Set a maximum height */
             border-radius: 5px;
             background-color: #444c56;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             display: none; /* Initially hidden */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+
+		#copyBtn {
+            margin-top: 10px;
+            background-color: #61dafb; /* Green */
+        }
+
+        #copyBtn:hover {
+            background-color: #21a1f1; /* Darker green */
         }
     </style>
 </head>
@@ -136,6 +147,8 @@ function getWebviewContent(): string {
     <textarea name="prompt" id="prompt" rows="3" placeholder="Ask Something........"></textarea>
     <button id="askBtn">Ask</button>
     <div id="response"></div>
+	<button id="copyBtn" style="display: none;">Copy</button>
+    
     <script>
         const vscode = acquireVsCodeApi();
 
@@ -150,7 +163,17 @@ function getWebviewContent(): string {
                 const responseDiv = document.getElementById('response');
                 responseDiv.innerText = text;
                 responseDiv.style.display = 'block'; // Show the response
+				document.getElementById('copyBtn').style.display = 'inline-block'; // Show the copy button
             }
+        });
+
+		document.getElementById('copyBtn').addEventListener('click', () => {
+            const responseText = document.getElementById('response').innerText;
+            navigator.clipboard.writeText(responseText).then(() => {
+                alert('Response copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
         });
     </script>
 </body>
