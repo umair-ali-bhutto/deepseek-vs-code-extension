@@ -9,48 +9,197 @@ import ollama from 'ollama';
  */
 export function activate(context: vscode.ExtensionContext) {
 
-	const disposable = vscode.commands.registerCommand('deepseek-vs-code-extension.deepseek', () => {
+    const disposable = vscode.commands.registerCommand('deepseek-vs-code-extension.deepseek', () => {
 
 
-		const panel = vscode.window.createWebviewPanel(
-			'DeepChat',
-			'Deep Seek Chat',
-			vscode.ViewColumn.One,
-			{ enableScripts: true }
-		);
+        const panel = vscode.window.createWebviewPanel(
+            'DeepChat',
+            'Deep Seek Chat',
+            vscode.ViewColumn.One,
+            { enableScripts: true }
+        );
 
-		panel.webview.html = getWebviewContent();
+        panel.webview.html = getWebviewContent();
 
-		panel.webview.onDidReceiveMessage(async (message: any) => {
-			if (message.command === 'chat') {
-				const userprompt = message.text;
-				let responseText = '';
+        panel.webview.onDidReceiveMessage(async (message: any) => {
+            if (message.command === 'chat') {
+                const userText = message.text.trim().toLowerCase();
 
-				try {
-					const streamResponse = await ollama.chat({
-						model: 'deepseek-r1:1.5b',
-						messages: [{ role: 'user', content: userprompt }],
-						stream: true
-					});
+                // Check for greetings
+                const greetings = [
+                    'hi',
+                    'hello',
+                    'hey',
+                    'heya',
+                    'hiya',
+                    'yo',
+                    'sup',
+                    'salam',
+                    'aslamualaikum',
+                    'assalamu alaikum',
+                    'assalamualaikum',
+                    'good morning',
+                    'morning',
+                    'good afternoon',
+                    'afternoon',
+                    'good evening',
+                    'evening',
+                    'greetings',
+                    'what’s up',
+                    'whats up',
+                    'howdy',
+                    'hola',
+                    'bonjour',
+                    'namaste',
+                    'sawasdee',
+                    'ciao',
+                    'konnichiwa',
+                    'annyeong',
+                    'aloha',
+                    'shalom',
+                    'peace',
+                    'hi there',
+                    'hello there'
+                ];
 
-					for await (const part of streamResponse) {
-						responseText += part.message.content;
-						panel.webview.postMessage({ command: 'chatResponse', text: responseText });
-					}
-				} catch (error) {
-					panel.webview.postMessage({ command: 'chatResponse', text: `Error: ${String(error)}` });
-				}
-			}
-		});
+                const isGreeting = greetings.some(g => userText === g);
 
-	});
 
-	context.subscriptions.push(disposable);
+                let userprompt = `
+        You are an assistant for a discount management system. A user will type a simple message like "Is there any discount on my HBL card at Burger King in Lahore?" or "Check discount for 1234-5678-9012-3456 at KFC".
+        
+        Your job is to extract the following values from the message:
+        - card_number (if mentioned) 
+        - card_type (like Visa, Standard Chartered, Platinum, platinum, american express, master card etc.)
+        - restaurant_name or merchant_name
+        - merchant_id (if available) like 20000000000015 or like 999999999999999 it will be 15 digits
+        - place (like city or area)
+        
+        If any value is missing, just return null for that field.
+        
+        Reply ONLY in this JSON format:
+        {
+          "card_number": "...",
+          "card_type": "...",
+          "restaurant_name": "...",
+          "merchant_id": "...",
+          "merchant_name": "...",
+          "place": "..."
+        }
+        
+        User message: "${message.text}"
+        `;
+
+                if (isGreeting) {
+                    userprompt = message.text;
+                }
+
+
+                let responseText = '';
+
+                try {
+                    const response = await fetch('http://localhost:11434/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: 'deepseek-r1:1.5b',
+                            messages: [{ role: 'user', content: userprompt }],
+                            stream: false
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const reply = result.message?.content || 'No response';
+                    panel.webview.postMessage({ command: 'chatResponse', text: reply });
+
+                } catch (error) {
+                    panel.webview.postMessage({ command: 'chatResponse', text: `Error: ${String(error)}` });
+                }
+            }
+        });
+
+        //         panel.webview.onDidReceiveMessage(async (message: any) => {
+        //             if (message.command === 'chat') {
+        //                 const userprompt = `
+        // You are an assistant for a discount management system. A user will type a simple message like "Is there any discount on my HBL card at Burger King in Lahore?" or "Check discount for 1234-5678-9012-3456 at KFC".
+
+        // Your job is to extract the following values from the message:
+        // - card_number (if mentioned) 
+        // - card_type (like Visa, Standard Chartered, Platinum, platinum, american express, master card etc.)
+        // - restaurant_name or merchant_name
+        // - merchant_id (if available) like 20000000000015 or like 999999999999999 it will be 15 digits
+        // - place (like city or area)
+
+        // If any value is missing, just return null for that field.
+
+        // Reply ONLY in this JSON format:
+        // {
+        //   "card_number": "...",
+        //   "card_type": "...",
+        //   "restaurant_name": "...",
+        //   "merchant_id": "...",
+        //   "merchant_name": "...",
+        //   "place": "..."
+        // }
+
+        // User message: "${message.text}"
+        // `;
+
+        //                 // const userprompt = message.text;
+        //                 let responseText = '';
+
+        //                 // try {
+        //                 //     const streamResponse = await ollama.chat({
+        //                 //         model: 'deepseek-r1:1.5b',
+        //                 //         messages: [{ role: 'user', content: userprompt }],
+        //                 //         stream: true
+        //                 //     });
+
+        //                 //     for await (const part of streamResponse) {
+        //                 //         responseText += part.message.content;
+        //                 //         panel.webview.postMessage({ command: 'chatResponse', text: responseText });
+        //                 //     }
+        //                 // } catch (error) {
+        //                 //     panel.webview.postMessage({ command: 'chatResponse', text: `Error: ${String(error)}` });
+        //                 // }
+
+        //                 try {
+        //                     const response = await fetch('http://localhost:11434/api/chat', {
+        //                         method: 'POST',
+        //                         headers: { 'Content-Type': 'application/json' },
+        //                         body: JSON.stringify({
+        //                             model: 'deepseek-r1:1.5b',
+        //                             messages: [{ role: 'user', content: userprompt }],
+        //                             stream: false // set to false for non-streaming
+        //                         })
+        //                     });
+
+        //                     if (!response.ok) {
+        //                         throw new Error(`HTTP error! status: ${response.status}`);
+        //                     }
+
+        //                     const result = await response.json();
+        //                     const reply = result.message?.content || 'No response';
+        //                     panel.webview.postMessage({ command: 'chatResponse', text: reply });
+
+        //                 } catch (error) {
+        //                     panel.webview.postMessage({ command: 'chatResponse', text: `Error: ${String(error)}` });
+        //                 }
+        //             }
+        //         });
+
+    });
+
+    context.subscriptions.push(disposable);
 }
 
 
 function getWebviewContent(): string {
-	return /*HTML*/`
+    return /*HTML*/`
 
 	<!DOCTYPE html>
 <html lang="en">
